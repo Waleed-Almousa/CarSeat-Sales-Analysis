@@ -6,7 +6,7 @@ The data set used for this project is the ‘Carseats’ data set from the ‘IS
 
 The HTML Document is comprised of the following sections:
 
-1. Visualize/fitting: Created simple graphs and linear regression model to visualize the data
+1. Data Visualization: Created simple graphs and linear regression model to visualize the data
 
 2. Creating the model: Implemented stepwise variable selection method to develop and optimize a linear regression model of CarSeat sales
 
