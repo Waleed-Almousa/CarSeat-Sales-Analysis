@@ -98,7 +98,7 @@ ggplot(Carseats, aes(x = Sales)) +
 
 ```
 
-Most car seat products tend to have roughly observed 5,000 - 7,000 sales
+Most car seat products tend to have roughly 5,000 - 7,000 observed sales
 
 
 ### Part 2) Creating the model
