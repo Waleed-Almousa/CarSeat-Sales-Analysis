@@ -1,0 +1,226 @@
+---
+title: "Car Seat Sales Analysis"
+author: "Waleed Almousa"
+date: "2024-03-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(dplyr)
+library(lmvar)
+library(boot)
+library(ISLR)
+library(glmnet)
+```
+
+
+
+
+## Variable selection with `Carseats` data set
+
+***
+
+The data set used for this project is the 'Carseats' data set from the 'ISLR' package. The goal of this project is to determine which variables are most impactful on the number of Car Seat sales, and then use these variables to create a linear regression model to predict car seat sales. The steps used to complete this are as follows: 
+
+1. Visualize/fitting: Created simple graphs and Linear regression model to visualize the data 
+
+2. Creating the model:  Implemented  Step wise variable selection method to develop and optimize a linear regression model of CarSeat sales
+
+3. Interpreting the model:  Provided an explanation of selected variables and what the coefficients of each respective variable represents
+
+4. Evaluating the model: Performed Cross validation to find the out of sample MSE of the model
+
+5. Discussion: Explained Potential model violations and how this model can be useful
+
+
+***
+
+
+Data is loaded in the following cell. For context, the first 6 rows of the data set are shown below. The dataset contains 400 observations and 11 variables.
+
+```{r}
+
+Carseats = ISLR::Carseats
+
+# Further details on the dataset can be seen on the help page by running ?Carseats
+
+str(Carseats)
+head(Carseats)
+```
+
+
+### Part 1) Visualizing/fitting
+
+First, lets make some visualizations of the dataset to help set the stage for the rest of the analysis. Below are some plots that illustrate rough trends and the spread of the data.
+
+```{r}
+
+ggplot(Carseats, aes(x = Advertising, y = Sales)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "orange") +
+  labs(title = "Sales vs. Advertising",
+       x = "Advertising (in thousands of dollars)",
+       y = "Sales (in thousands)")
+```
+
+As advertising for a product increases, product sales tend to increase as well.
+
+```{r}
+ggplot(Carseats, aes(x = ShelveLoc, y = Sales, fill = ShelveLoc)) +
+  geom_boxplot() +
+  labs(title = "Sales by Shelving Location",
+       x = "Shelving Location",
+       y = "Sales (in thousands)")
+```
+
+Products with a shelving location categroized as "good" tend to have higher sales.
+
+
+```{r}
+ggplot(Carseats, aes(x = Income, y = Price, color = Urban)) +
+  geom_point() +
+  labs(title = "Price vs. Income",
+       x = "Income (in thousands of dollars)",
+       y = "Price")
+```
+
+
+```{r}
+ggplot(Carseats, aes(x = Sales)) +
+  geom_histogram(binwidth = 2, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Sales",
+       x = "Sales (in thousands)",
+       y = "Frequency")
+
+
+```
+
+Most car seat products tend to have roughly observed 5,000 - 7,000 sales
+
+
+### Part 2) Creating the model
+
+I first ran a step wise variable selection algorithm to create a linear model. The algorithm began with a linear model containing ALL variables, and iteratively added/removed variables to improve the model until no further optimization can be made.
+
+
+Here is the steps the initial stepwise model took:
+```{r}
+
+stepwise_model=step(lm(Sales ~ ., data = Carseats), direction = "both")
+```
+
+
+Here is a summary of the initial stepwise model:
+```{r}
+summary(stepwise_model)
+```
+
+This model had a RSE of 1.02 on 392 degrees of freedom. This is already extremely low, but I attempted to further improve the model below.
+
+
+The below stepwise algorithm starts with ONLY the variables that were marked as statistically significant from the previous model, along with a few interaction terms. I ran the same algorithm as above to iteratively add/remove variables to improve the model. 
+
+```{r}
+stepwise2 = step(lm(Sales ~ CompPrice+Income+Advertising+Price+ShelveLoc+Age+ CompPrice:Income+ CompPrice:Advertising+CompPrice:Price+CompPrice:ShelveLoc+CompPrice:Age+Advertising:Price+Advertising:Age, data = Carseats), direction = "both")
+
+```
+
+
+Summary of final model:
+```{r}
+# Final model: 
+
+summary(stepwise2)
+
+```
+
+I attempted to run the algorithm Again with non-linear variables to check if any of the features have a non-linear relationship with the number of Sales. There were no significant non-linear predictors, and thus I excluded this section from my project. 
+
+### Part 3) Interpreting Model
+
+
+##### **Explanation of final model**:
+
+All of the predictors in the final model are statistically significant at at least the alpha=0.001 level, which means there is less than a 0.01% chance that the predictors do not have any impact on the car seat sales.
+
+The Multiple R-squared value of the final model is .88, which means that the model correctly explains 88% of the data. The adjusted R-Square is 0.87, which means it is slightly better and simpler than the initial model, which had an Adjusted R-squared of .86.
+
+
+
+##### **Interpretation coefficients**
+
+Below is an interpretation of each significant coefficient in the  model. 
+
+The predictors that are most significant in predicting sales are: CompPrice, Income, Advertising, Price, ShelveLocGood, ShelveLocMedium, CompPrice:Income, and Age
+
+Interpretation of coefficient:
+
+GIVEN ALL OTHER VARIBLES ARE HELD CONSTANT for each of the following coeficient interpretations:
+
+CompPrice: A one-unit increase in prices charged by competitors yields a .12 unit increase in sales
+
+Income: A one-unit increase in community income level(in thousands) yields a .06 unit increase in sales
+
+Advertising: A one unit increase in the local advertising budget(in thousand) yields a .12 unit increase in sales
+
+Price: A one unit increase in the price of the car seat is associated with a .1 unit decrease in sales
+
+ShelvLocGood: having a good shelving location is associated with an increase in sales of 4.83 units
+
+ShelveLocMedium: having a medium shelving location is associated with a 1.92 unit increase in sales
+
+Age: A one unit increase in the average age of the local population yields a .05 unit decrease in sales
+
+CompPrice:Income: This interaction term suggests that the effect of compPrice on sales depends on income. A one unit increase in the product of compPrice and income is associated with a .00039 decrease in sales.
+
+
+### Part 4) Evaluating the Model
+
+To further evaluate the accuracy of the model, I performed Cross-validation to estimate the out-of-sample Mean Squared Error (MSE):
+
+```{r}
+
+set.seed(123) #Set seed for reproducability
+
+cv_results <- cv.glm(Carseats, lm(formula(stepwise2), data=Carseats, x=T, y=T), K = 10)
+
+cat("The out of sample MSE of the final model is: ", (cv_results$delta[1]))
+```
+
+Below is a plot of the Q-Q Residuals of the model:
+```{r}
+plot(stepwise2, which = 2)
+
+```
+
+The residuals fall on a linear line almost perfectly. This suggests that the relationship between the predictors and the response variable (Sales) is linear.  
+
+Statistical Summary of final model:
+
+ - MSE: 1.049
+ 
+ - R-Squared value: 0.88
+ 
+ - Adjusted R-Squared: 0.873
+ 
+ - RSE: 1 on 391 Degrees of freedom
+
+
+***
+
+### Discussion
+
+#### **Potential Model violations**:
+
+Step wise variable selection is done by adding/removing variables one at a time; this may lead to an unoptimized model, as some variable may become more important once others are removed. 
+
+An initial assumption that was made is that the effect of changes in predictors is constant regardless of the values of other predictors. I checked this assumption while fitting my model by implementing various interaction terms, one of which being in the final model. All  other interaction terms were not significant enough to include in the final model. 
+
+#### **How can this model be useful?**
+
+The coefficient of each respective variable give a clear representation of how each variable impacts car seat sales. This information can be utilized by companies to make adjustments to their product to increase sales. For example, a company can focus on putting their products in richer cities, increase the amount they put into advertising, and decrease their product price to increase Sales. 
+
+Though all of the adjustments suggested by the model may be intuitive, it gives a good illustration of exactly  how much each factor impacts car seat sales. This model also demonstrates statistical proof to  intuitive assumptions (such as the assumption that lower priced products tend to have relatively higher sales).
