@@ -17,4 +17,6 @@ The HTML Document is comprised of the following sections:
 5. Discussion: Explained Potential model violations and how this model can be useful
 
 
+
+
 Project was completed independantly during fall 2023 semester.
