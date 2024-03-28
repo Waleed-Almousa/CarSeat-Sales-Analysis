@@ -19,4 +19,4 @@ The HTML Document is comprised of the following sections:
 
 
 
-Project was completed independantly during fall 2023 semester.
+Project was completed independantly during fall 2023.
